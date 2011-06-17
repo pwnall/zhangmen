@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'zhangmen'
+
+Zhangmen::Cli.new.run ARGV

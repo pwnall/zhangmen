@@ -10,7 +10,13 @@ module Zhangmen
 class Client
   def initialize
     @mech = mechanizer
+    @cache = {}
   end
+  
+  # Cache of HTTP requests / responses.
+  #
+  # The cache covers all the song metadata, but not actual song data.
+  attr_accessor :cache
   
   # Fetches a collection of playlists by the category ID.
   #
@@ -47,8 +53,7 @@ class Client
         title = match[1].encode('UTF-8')
         author = match[2].encode('UTF-8')
       else
-        title = raw_name.encode('UTF-8')
-        author = nil
+        author = title = raw_name.encode('UTF-8')
       end
       
       {
@@ -69,9 +74,10 @@ class Client
     song_sources(entry).each do |src|
       begin
         result = @mech.get src[:url]
-        if result.kind_of? Mechanize::File
-          p src
-          return result.body
+        next unless result.kind_of?(Mechanize::File)
+        bits = result.body
+        if bits[-256, 3] == 'TAG' || bits[0, 3] == 'ID3'
+          return bits
         end
       rescue Mechanize::ResponseCodeError
         # Skip over to the next source.
@@ -87,11 +93,14 @@ class Client
   #
   # Returns
   def song_sources(entry)
-    result = op 12, :count => 1, :mtype => 1, :title => entry[:raw_name], :url => '', :listenreelect => 0
+    result = op 12, :count => 1, :mtype => 1, :title => entry[:raw_name],
+                    :url => '', :listenreelect => 0
     result.css('url').map do |url_node|
+      filename = url_node.css('decode').inner_text
+      encoded_url = url_node.css('encode').inner_text
+      url = File.join File.dirname(encoded_url), filename
       {
-        :url => url_node.css('encode').inner_text,
-        :filename => url_node.css('decode').inner_text,
+        :url => url,
         :type => url_node.css('type').inner_text.to_i,
         :lyrics_id => url_node.css('lrid').inner_text.to_i,
         :flag => url_node.css('flag').inner_text
@@ -107,8 +116,10 @@ class Client
   #
   # Returns a Nokogiri root node.
   def op(opcode, args)
-    response = @mech.get op_url(opcode, args)
-    Nokogiri.XML(response.body).root
+    url = op_url(opcode, args)
+    cache_key = url.to_s
+    @cache[cache_key] ||= @mech.get(url).body
+    Nokogiri.XML(@cache[cache_key]).root
   end
   
   # The fetch URL for an XML opcode.

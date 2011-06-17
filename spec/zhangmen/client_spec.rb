@@ -88,10 +88,6 @@ describe Zhangmen::Client do
       it 'should have a url key in each source' do
         sources.map { |src| src[:url] }.any?(&:empty?).should be_false
       end
-
-      it 'should have a filename key in each source' do
-        sources.map { |src| src[:filename] }.any?(&:empty?).should be_false
-      end
     end
   end
   
