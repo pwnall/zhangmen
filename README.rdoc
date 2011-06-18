@@ -1,6 +1,22 @@
 = zhangmen
 
-Description goes here.
+Fetches music from the Baidu streaming music player.
+
+== Usage
+
+First get the directory containing all the categories and playlists.
+
+    zhangmen list
+    
+Then choose a playlist and download all its songs.
+
+    zhangmen fetch 602
+    
+The songs will be downloaded in the current directory. One directory will be made for each artist, and all that artist's songs will be saved there.
+
+== Known Issues
+
+Some songs might not download. The Flash player skips over those songs too, so it seems to be a server issue.
 
 == Contributing to zhangmen
  
