@@ -84,6 +84,8 @@ class Client
           end
         rescue EOFError
           # Server hung up on us. Try again in case the error is temporary.
+        rescue Timeout::Error
+          # Server hung up on us. Try again in case the error is temporary.
         rescue Mechanize::ResponseCodeError
           # 500-ish response. Try again in case the error is temporary.
         end 
