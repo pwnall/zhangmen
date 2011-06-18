@@ -15,7 +15,9 @@ class Cli
         save_client_cache
         yield category_id, playlists
         category_id += 1
-      rescue
+      rescue Exception => e
+        puts "#{e.class.name}: #{e}"
+        puts e.backtrace.join("\n")
         break
       end
     end
@@ -60,7 +62,7 @@ class Cli
   # Last snapshot of the client's metadata cache.
   def client_cache
     if File.exist? client_cache_path
-      YAML.load File.read(client_cache_path)
+      YAML.load(File.read(client_cache_path)) || {} rescue {}
     else
       {}
     end
@@ -68,8 +70,12 @@ class Cli
   
   # Saves a new snapshot of the client's metadata cache.
   def client_cache=(new_contents)
-    File.open(client_cache_path, 'w') do |f|
-      YAML.dump new_contents, f
+    begin
+      File.open(client_cache_path, 'w') do |f|
+        YAML.dump new_contents, f
+      end
+    rescue ArgumentError => e
+      # Encoding error; bummer, can't cache
     end
   end
   
