@@ -72,16 +72,22 @@ class Client
   # Returns the MP3 bits.
   def song(entry)
     song_sources(entry).each do |src|
-      begin
-        result = @mech.get src[:url]
-        next unless result.kind_of?(Mechanize::File)
-        bits = result.body
-        if bits[-256, 3] == 'TAG' || bits[0, 3] == 'ID3'
-          return bits
-        end
-      rescue Mechanize::ResponseCodeError
-        # Skip over to the next source.
-      end 
+      3.times do
+        begin
+          result = @mech.get src[:url]
+          next unless result.kind_of?(Mechanize::File)
+          bits = result.body
+          if bits[-256, 3] == 'TAG' || bits[0, 3] == 'ID3'
+            return bits
+          else
+            break
+          end
+        rescue EOFError
+          # Server hung up on us. Try again in case the error is temporary.
+        rescue Mechanize::ResponseCodeError
+          # 500-ish response. Try again in case the error is temporary.
+        end 
+      end
     end
     nil
   end
