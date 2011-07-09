@@ -10,8 +10,8 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = [%q{Victor Costan}]
   s.date = %q{2011-07-09}
-  s.description = %q{TODO: longer description of your gem}
-  s.email = %q{costan@gmail.com}
+  s.description = %q{CLI and library for downloading music from Baidu}
+  s.email = %q{victor@costan.us}
   s.executables = [%q{zhangmen}]
   s.extra_rdoc_files = [
     "LICENSE.txt",
@@ -33,13 +33,14 @@ Gem::Specification.new do |s|
     "lib/zhangmen/client.rb",
     "spec/spec_helper.rb",
     "spec/zhangmen/client_spec.rb",
-    "spec/zhangmen_spec.rb"
+    "spec/zhangmen_spec.rb",
+    "zhangmen.gemspec"
   ]
   s.homepage = %q{http://github.com/pwnall/zhangmen}
   s.licenses = [%q{MIT}]
   s.require_paths = [%q{lib}]
   s.rubygems_version = %q{1.8.5}
-  s.summary = %q{TODO: one-line summary of your gem}
+  s.summary = %q{CLI and library for downloading music from Baidu}
 
   if s.respond_to? :specification_version then
     s.specification_version = 3
