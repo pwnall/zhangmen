@@ -15,6 +15,10 @@ First get the directory containing all the categories and playlists.
 Then choose a playlist and download all its songs.
 
     zhangmen fetch 602
+
+Or, if you're feeling undecided, grab the entire library.
+
+    zhangmen all
     
 The songs will be downloaded in the current directory. One directory will be made for each artist, and all that artist's songs will be saved there.
 

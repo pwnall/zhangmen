@@ -17,9 +17,9 @@ Jeweler::Tasks.new do |gem|
   gem.name = "zhangmen"
   gem.homepage = "http://github.com/pwnall/zhangmen"
   gem.license = "MIT"
-  gem.summary = %Q{TODO: one-line summary of your gem}
-  gem.description = %Q{TODO: longer description of your gem}
-  gem.email = "costan@gmail.com"
+  gem.summary = %Q{CLI and library for downloading music from Baidu}
+  gem.description = %Q{CLI and library for downloading music from Baidu}
+  gem.email = "victor@costan.us"
   gem.authors = ["Victor Costan"]
   # dependencies defined in Gemfile
 end

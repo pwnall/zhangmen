@@ -8,12 +8,19 @@ module Zhangmen
 class Cli
   def scan_categories
     category_id = 1
+    empty_categories = 0
     
     loop do
       begin
         playlists = @client.category category_id
         save_client_cache
-        yield category_id, playlists
+        if playlists.empty?
+          empty_categories += 1
+          break if empty_categories == 5
+        else
+          empty_categories = 0
+          yield category_id, playlists
+        end
         category_id += 1
       rescue Exception => e
         puts "#{e.class.name}: #{e}"
@@ -50,6 +57,16 @@ class Cli
         print "ok\n"
       else
         print "FAIL\n"
+      end
+    end
+  end
+  
+  def all
+    scan_categories do |id, playlists|
+      puts "Category #{id}"
+      playlists.each do |list|
+        puts "  #{list[:name]} - #{list[:id]} - #{list[:song_count]} songs"
+        playlist list[:id]
       end
     end
   end
@@ -93,7 +110,9 @@ class Cli
     when 'list'
       categories
     when 'fetch'
-      playlist args[1]
+      args[1..-1].each { |arg| playlist arg }
+    when 'all'
+      all
     end
   end
 end  # class Zhangmen::Cli
