@@ -103,7 +103,11 @@ class Cli
   
   # Runs a command.
   def run(args)
-    @client = Zhangmen::Client.new
+    options = {}
+    if proxy_server = ENV['http_proxy'] || ENV['all_proxy']
+      options[:proxy] = proxy_server
+    end
+    @client = Zhangmen::Client.new options
     @client.cache = client_cache
     
     case args[0]

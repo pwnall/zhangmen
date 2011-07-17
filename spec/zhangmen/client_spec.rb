@@ -2,7 +2,29 @@
 require File.expand_path('../../spec_helper', __FILE__)
 
 describe Zhangmen::Client do
-  let(:client) { Zhangmen::Client.new }
+  describe 'mechanizer' do
+    let(:empty_client) { Zhangmen::Client.new }
+    
+    it 'returns a Mechanize instance' do
+      empty_client.mechanizer.should be_kind_of(Mechanize)
+    end
+    
+    describe 'with a proxy option' do
+      let(:mech) do
+        empty_client.mechanizer :proxy => '127.0.0.1:3306'
+      end
+      
+      it 'parses the address correctly' do
+        mech.proxy_addr.should == '127.0.0.1'
+      end
+      
+      it 'parses the port correctly' do
+        mech.proxy_port.should == 3306
+      end
+    end
+  end
+
+  let(:client) { Zhangmen::Client.new :proxy => ENV['http_proxy'] }
   
   describe 'op_url' do
     it 'encodes everything correctly' do

@@ -8,8 +8,12 @@ module Zhangmen
   
 # Wraps a client session for accessing Baidu's streaming music service.
 class Client
-  def initialize
-    @mech = mechanizer
+  # New client session.
+  #
+  # The options hash accepts the following keys:
+  #   :proxy:: "host:port" string
+  def initialize(options = {})
+    @mech = mechanizer options
     @cache = {}
   end
   
@@ -144,9 +148,14 @@ class Client
   end
   
   # Mechanize instance customized to maximize fetch success.
-  def mechanizer
+  def mechanizer(options = {})
     mech = Mechanize.new
     mech.user_agent_alias = 'Linux Firefox'
+    if options[:proxy]
+      host, _, port_str = *options[:proxy].rpartition(':')
+      port_str ||= 80
+      mech.set_proxy host, port_str.to_i
+    end
     mech
   end
 end  # class Zhangmen::Client

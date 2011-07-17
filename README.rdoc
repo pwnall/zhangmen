@@ -20,7 +20,25 @@ Or, if you're feeling undecided, grab the entire library.
 
     zhangmen all
     
+Feeling lazy? Download the entire catalog.
+
+    zhangmen all
+
 The songs will be downloaded in the current directory. One directory will be made for each artist, and all that artist's songs will be saved there.
+
+If you're not in Mainland China, you can use a proxy to get your music fix.
+
+    http_proxy=google.for.a.proxy:1234 zhangmen fetch 602
+
+== Testing
+
+The tests are written in RSpec. Run them like this.
+
+   rake spec
+
+If you're not in Mainland China, set http_proxy so the downloading tests pass.
+
+    http_proxy=google.for.a.proxy:1234 rake spec
 
 == Known Issues
 
