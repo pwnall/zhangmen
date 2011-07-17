@@ -12,9 +12,11 @@ class Client
   #
   # The options hash accepts the following keys:
   #   :proxy:: "host:port" string
+  #   :cache_ttl:: validity of cached requests, in seconds
   def initialize(options = {})
     @mech = mechanizer options
     @cache = {}
+    @cache_ttl = options[:cache_ttl] || (24 * 60 * 60)  # 1 day
   end
   
   # Cache of HTTP requests / responses.
@@ -128,13 +130,38 @@ class Client
   #
   # Returns a Nokogiri root node.
   def op(opcode, args)
-    url = op_url(opcode, args)
-    cache_key = url.to_s
-    @cache[cache_key] ||= @mech.get(url).body
-    Nokogiri.XML(@cache[cache_key]).root
+    cache_key = op_cache_key opcode, args
+    if @cache[cache_key] && Time.now.to_f - @cache[cache_key][:at] < @cache_ttl
+      xml = @cache[cache_key][:xml]
+    else
+      xml = op_xml_without_cache opcode, args
+      @cache[cache_key] = { :at => Time.now.to_f, :xml => xml }
+    end
+    
+    Nokogiri.XML(xml).root
+  end
+  
+  # Performs a numbered operation, returning the raw XML.
+  #
+  # Accepts the same arguments as Client#op.
+  #
+  # Does not perform any caching.
+  def op_xml_without_cache(opcode, args)
+    @mech.get(op_url(opcode, args)).body
+  end
+  
+  # A string suitable as a key for caching a numbered operation's result.
+  #
+  # Accepts the same arguments as Client#op.
+  def op_cache_key(opcode, args)
+    { :op => opcode }.merge(args).
+        map { |k, v| "#{CGI.escape(k.to_s)}=#{CGI.escape(v.to_s)}" }.
+        sort.join('&')
   end
   
   # The fetch URL for an XML opcode.
+  #
+  # Accepts the same arguments as Client#op.
   def op_url(opcode, args)
     query = { :op => opcode }.merge(args).
         map { |k, v| "#{CGI.escape(k.to_s)}=#{CGI.escape(v.to_s)}" }.

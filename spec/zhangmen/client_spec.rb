@@ -34,8 +34,23 @@ describe Zhangmen::Client do
     end
   end
   
+  describe 'op_cache_key' do
+    it 'encodes arguments correctly' do
+      client.op_cache_key(22, :listid => 600).should == 'listid=600&op=22'
+    end
+  end
+  
+  describe 'cache' do
+    it 'should behave like a Hash' do
+      client.cache.should respond_to(:has_key?)
+      client.cache.should respond_to(:[])
+      client.cache.should respond_to(:[]=)
+    end
+  end
+  
   describe 'op' do
     describe 'with good known arguments' do
+      let(:key) { client.op_cache_key(22, :listid => 600) }
       let(:result) { client.op 22, :listid => 600 }
       
       it 'returns a Nokogiri root node' do
@@ -44,6 +59,21 @@ describe Zhangmen::Client do
       
       it 'returns a <result> root node' do
         result.name.should == 'result'
+      end
+      
+      it 'caches the request' do
+        result.should be_true  # Make sure the request is performed
+        client.cache.should have_key key
+        client.cache[key].should have_key(:at)
+        client.cache[key].should have_key(:xml)
+      end
+      
+      describe 'repeated with same arguments' do
+        it 'uses the cache' do
+          result.should be_true # Make sure the request is performed.
+          client.should_not_receive(:op_xml_without_cache)
+          client.op(22, :listid => 600).should be_true
+        end
       end
     end
   end

@@ -93,6 +93,7 @@ class Cli
       end
     rescue ArgumentError => e
       # Encoding error; bummer, can't cache
+      # puts "#{e.class.name}: #{e}"
     end
   end
   
