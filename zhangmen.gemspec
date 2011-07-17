@@ -5,14 +5,15 @@
 
 Gem::Specification.new do |s|
   s.name = %q{zhangmen}
-  s.version = "0.1.0"
+  s.version = "0.1.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = [%q{Victor Costan}]
-  s.date = %q{2011-07-09}
+  s.authors = ["Victor Costan"]
+  s.date = %q{2011-07-17}
+  s.default_executable = %q{zhangmen}
   s.description = %q{CLI and library for downloading music from Baidu}
   s.email = %q{victor@costan.us}
-  s.executables = [%q{zhangmen}]
+  s.executables = ["zhangmen"]
   s.extra_rdoc_files = [
     "LICENSE.txt",
     "README.rdoc"
@@ -37,9 +38,9 @@ Gem::Specification.new do |s|
     "zhangmen.gemspec"
   ]
   s.homepage = %q{http://github.com/pwnall/zhangmen}
-  s.licenses = [%q{MIT}]
-  s.require_paths = [%q{lib}]
-  s.rubygems_version = %q{1.8.5}
+  s.licenses = ["MIT"]
+  s.require_paths = ["lib"]
+  s.rubygems_version = %q{1.6.2}
   s.summary = %q{CLI and library for downloading music from Baidu}
 
   if s.respond_to? :specification_version then
