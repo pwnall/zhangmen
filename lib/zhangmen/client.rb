@@ -2,6 +2,7 @@ require 'cgi'
 require 'logger'
 
 require 'curb'
+require 'hpricot'
 require 'mechanize'
 require 'nokogiri'
 
@@ -19,12 +20,13 @@ class Client
   #   :logger:: Logger instance to use
   def initialize(options = {})
     @mech = mechanizer options
-    @curb = curber
+    @curb = curber options
     @cache = {}
     @cache_ttl = options[:cache_ttl] || (24 * 60 * 60)  # 1 day
     log_level = options[:log_level] || Logger::WARN
     @logger = options[:logger] || Logger.new(STDERR)
     @logger.level = log_level
+    @parser = options[:use_hpricot] ? :hpricot : :nokogiri
   end
   
   # Cache of HTTP requests / responses.
@@ -41,11 +43,11 @@ class Client
   # Returns an array of playlists.
   def category(category_id)
     result = op 3, :list_cat => category_id
-    result.css('data').map do |playlist_node|
+    result.search('data').map do |playlist_node|
       {
-        :id => playlist_node.css('id').inner_text,
-        :name => playlist_node.css('name').inner_text.encode('UTF-8'),
-        :song_count => playlist_node.css('tcount').inner_text.to_i
+        :id => playlist_node.search('id').inner_text,
+        :name => playlist_node.search('name').inner_text.encode('UTF-8'),
+        :song_count => playlist_node.search('tcount').inner_text.to_i
       }
     end
   end
@@ -58,11 +60,10 @@ class Client
   # Returns an array of songs.
   def playlist(list)
     result = op 22, :listid => list[:id]
-    native_encoding = result.document.encoding
     
-    count = result.css('count').inner_text.to_i
-    result.css('data').map do |song_node|
-      raw_name = song_node.css('name').inner_text
+    count = result.search('count').inner_text.to_i
+    result.search('data').map do |song_node|
+      raw_name = song_node.search('name').inner_text
       if match = /^(.*)\$\$(.*)\$\$\$\$/.match(raw_name)
         title = match[1].encode('UTF-8')
         author = match[2].encode('UTF-8')
@@ -70,10 +71,16 @@ class Client
         author = title = raw_name.encode('UTF-8')
       end
       
+      if @parser == :nokogiri
+        native_encoding = result.document.encoding
+      else
+        native_encoding = raw_name.encoding
+      end
       {
-        :raw_name => raw_name.encode(native_encoding),
+        :raw_name => raw_name.encode('UTF-8'),
+        :raw_encoding => native_encoding,
         :title => title, :author => author,
-        :id => song_node.css('id').inner_text
+        :id => song_node.search('id').inner_text
       }
     end
   end
@@ -93,7 +100,7 @@ class Client
             @curb.perform
           rescue Curl::Err::PartialFileError
             got = @curb.body_str.length
-            expected = @curb.downloaded_content_length
+            expected = @curb.downloaded_content_length.to_i
             if got < expected
               @logger.warn do
                 "Server hangup fetching #{src[:url]}; got #{got} bytes, " +
@@ -112,11 +119,23 @@ class Client
           else
             break
           end
+        rescue Curl::Err::GotNothingError
+          @logger.warn do
+            "Server hangup fetching #{src[:url]}; got no HTTP response"
+          end
+          # Try again in case the error is temporary.
+          sleep 1
+        rescue Curl::Err::RecvError
+          @logger.warn do
+            "TCP error fetching #{src[:url]}"
+          end
+          # Try again in case the error is temporary.
+          sleep 1
         rescue Timeout::Error
           @logger.warn do
             "Timeout while downloading #{src[:url]}"
           end
-          # Server hung up on us. Try again in case the error is temporary.
+          # Try again in case the error is temporary.
           sleep 1
         end
       end
@@ -131,17 +150,18 @@ class Client
   #
   # Returns
   def song_sources(entry)
-    result = op 12, :count => 1, :mtype => 1, :title => entry[:raw_name],
-                    :url => '', :listenreelect => 0
-    result.css('url').map do |url_node|
-      filename = url_node.css('decode').inner_text
-      encoded_url = url_node.css('encode').inner_text
+    title = entry[:raw_name].encode(entry[:raw_encoding])
+    result = op 12, :count => 1, :mtype => 1, :title => title, :url => '',
+                    :listenreelect => 0
+    result.search('url').map do |url_node|
+      filename = url_node.search('decode').inner_text
+      encoded_url = url_node.search('encode').inner_text
       url = File.join File.dirname(encoded_url), filename
       {
         :url => url,
-        :type => url_node.css('type').inner_text.to_i,
-        :lyrics_id => url_node.css('lrid').inner_text.to_i,
-        :flag => url_node.css('flag').inner_text
+        :type => url_node.search('type').inner_text.to_i,
+        :lyrics_id => url_node.search('lrid').inner_text.to_i,
+        :flag => url_node.search('flag').inner_text
       }
     end
   end
@@ -165,7 +185,11 @@ class Client
       @logger.debug { "Live response\n#{xml}" }
     end
     
-    Nokogiri.XML(xml).root
+    if @parser == :nokogiri
+      Nokogiri.XML(xml).root
+    else
+      Hpricot(xml)
+    end
   end
   
   # Performs a numbered operation, returning the raw XML.
@@ -204,7 +228,7 @@ class Client
   # Mechanize instance customized to maximize fetch success.
   def mechanizer(options = {})
     mech = Mechanize.new
-    mech.user_agent_alias = 'Linux Firefox'
+    mech.user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/534.30 (KHTML, like Gecko) Chrome/12.0.742.124 Safari/534.30'
     if options[:proxy]
       host, _, port_str = *options[:proxy].rpartition(':')
       port_str ||= 80
@@ -218,7 +242,7 @@ class Client
     curb = Curl::Easy.new
     curb.enable_cookies = true
     curb.follow_location = true
-    curb.useragent = 'Mozilla/5.0 (X11; U; Linux i686; zh-CN; rv:1.9.2.8) Gecko/20100722 Ubuntu/10.04 (lucid) Firefox/3.6.8'
+    curb.useragent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/534.30 (KHTML, like Gecko) Chrome/12.0.742.124 Safari/534.30'
     if options[:proxy]
       curb.proxy_url = options[:proxy]
     else

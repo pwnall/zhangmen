@@ -3,6 +3,7 @@ source 'http://rubygems.org'
 # Example:
 #   gem 'activesupport', '>= 2.3.5'
 gem 'curb', '>= 0.7.0'
+gem 'hpricot', '>= 0.8.0'
 gem 'json', '>= 1.0.0'
 gem 'mechanize', '>= 2.0.0'
 gem 'nokogiri', '>= 1.4.0'

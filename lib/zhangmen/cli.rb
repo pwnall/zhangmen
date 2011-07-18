@@ -1,4 +1,5 @@
 require 'fileutils'
+require 'logger'
 require 'yaml'
 
 # :nodoc: namespace
@@ -11,22 +12,16 @@ class Cli
     empty_categories = 0
     
     loop do
-      begin
-        playlists = @client.category category_id
-        save_client_cache
-        if playlists.empty?
-          empty_categories += 1
-          break if empty_categories == 5
-        else
-          empty_categories = 0
-          yield category_id, playlists
-        end
-        category_id += 1
-      rescue Exception => e
-        puts "#{e.class.name}: #{e}"
-        puts e.backtrace.join("\n")
-        break
+      playlists = @client.category category_id
+      save_client_cache
+      if playlists.empty?
+        empty_categories += 1
+        break if empty_categories == 5
+      else
+        empty_categories = 0
+        yield category_id, playlists
       end
+      category_id += 1
     end
     category_id
   end
@@ -108,16 +103,22 @@ class Cli
     if proxy_server = ENV['http_proxy'] || ENV['all_proxy']
       options[:proxy] = proxy_server
     end
+    @logger = Logger.new STDERR
+    options[:logger] = @logger
     @client = Zhangmen::Client.new options
     @client.cache = client_cache
-    
-    case args[0]
-    when 'list'
-      categories
-    when 'fetch'
-      args[1..-1].each { |arg| playlist arg }
-    when 'all'
-      all
+
+    begin
+      case args[0]
+      when 'list'
+        categories
+      when 'fetch'
+        args[1..-1].each { |arg| playlist arg }
+      when 'all'
+        all
+      end
+    rescue Exception => e
+      @logger.error "#{e.class.name}: #{e}\n#{e.backtrace.join("\n")}\n"
     end
   end
 end  # class Zhangmen::Cli
