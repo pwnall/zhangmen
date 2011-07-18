@@ -1,5 +1,7 @@
 require 'cgi'
+require 'logger'
 
+require 'curb'
 require 'mechanize'
 require 'nokogiri'
 
@@ -13,10 +15,16 @@ class Client
   # The options hash accepts the following keys:
   #   :proxy:: "host:port" string
   #   :cache_ttl:: validity of cached requests, in seconds
+  #   :log_level:: severity treshold (e.g., Logger::ERROR)
+  #   :logger:: Logger instance to use
   def initialize(options = {})
     @mech = mechanizer options
+    @curb = curber
     @cache = {}
     @cache_ttl = options[:cache_ttl] || (24 * 60 * 60)  # 1 day
+    log_level = options[:log_level] || Logger::WARN
+    @logger = options[:logger] || Logger.new(STDERR)
+    @logger.level = log_level
   end
   
   # Cache of HTTP requests / responses.
@@ -80,21 +88,37 @@ class Client
     song_sources(entry).each do |src|
       3.times do
         begin
-          result = @mech.get src[:url]
-          next unless result.kind_of?(Mechanize::File)
-          bits = result.body
+          @curb.url = src[:url]
+          begin
+            @curb.perform
+          rescue Curl::Err::PartialFileError
+            got = @curb.body_str.length
+            expected = @curb.downloaded_content_length
+            if got < expected
+              @logger.warn do
+                "Server hangup fetching #{src[:url]}; got #{got} bytes, " +
+                "expected #{expected}"
+              end
+              # Server gave us fewer bytes than promised in Content-Length.
+              # Try again in case the error is temporary.
+              sleep 1
+              next
+            end
+          end
+          next unless @curb.response_code >= 200 && @curb.response_code < 300
+          bits = @curb.body_str
           if bits[-256, 3] == 'TAG' || bits[0, 3] == 'ID3'
             return bits
           else
             break
           end
-        rescue EOFError
-          # Server hung up on us. Try again in case the error is temporary.
         rescue Timeout::Error
+          @logger.warn do
+            "Timeout while downloading #{src[:url]}"
+          end
           # Server hung up on us. Try again in case the error is temporary.
-        rescue Mechanize::ResponseCodeError
-          # 500-ish response. Try again in case the error is temporary.
-        end 
+          sleep 1
+        end
       end
     end
     nil
@@ -130,12 +154,15 @@ class Client
   #
   # Returns a Nokogiri root node.
   def op(opcode, args)
+    @logger.debug { "XML op #{opcode} with #{args.inspect}" }
     cache_key = op_cache_key opcode, args
     if @cache[cache_key] && Time.now.to_f - @cache[cache_key][:at] < @cache_ttl
       xml = @cache[cache_key][:xml]
+      @logger.debug { "Cached response\n#{xml}" }
     else
       xml = op_xml_without_cache opcode, args
       @cache[cache_key] = { :at => Time.now.to_f, :xml => xml }
+      @logger.debug { "Live response\n#{xml}" }
     end
     
     Nokogiri.XML(xml).root
@@ -184,6 +211,20 @@ class Client
       mech.set_proxy host, port_str.to_i
     end
     mech
+  end
+  
+  # Curl::Easy instance customized to maximize download success.
+  def curber(options = {})
+    curb = Curl::Easy.new
+    curb.enable_cookies = true
+    curb.follow_location = true
+    curb.useragent = 'Mozilla/5.0 (X11; U; Linux i686; zh-CN; rv:1.9.2.8) Gecko/20100722 Ubuntu/10.04 (lucid) Firefox/3.6.8'
+    if options[:proxy]
+      curb.proxy_url = options[:proxy]
+    else
+      curb.proxy_url = nil
+    end
+    curb
   end
 end  # class Zhangmen::Client
   
