@@ -13,12 +13,16 @@ module Zhangmen
 class Client
   # New client session.
   #
-  # The options hash accepts the following keys:
-  #   :proxy:: "host:port" string
-  #   :cache_ttl:: validity of cached requests, in seconds
-  #   :log_level:: severity treshold (e.g., Logger::ERROR)
-  #   :logger:: Logger instance to use
+  # @option options [String] proxy "host:port" string, "auto" to have a proxy
+  #     discovered automatically, or nil / false to use direct requests
+  # @option options [Integer] cache_ttl validity of cached requests, in seconds
+  # @option options [Integer] log_level severity treshold (e.g., Logger::ERROR)
+  # @option options [Logger] logger receiver of logging info
   def initialize(options = {})
+    if options[:proxy] == 'auto'
+      options[:proxy] = Zhangmen::Proxy.fetch
+    end
+    
     @mech = mechanizer options
     @curb = curber options
     @cache = {}

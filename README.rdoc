@@ -4,7 +4,7 @@ Fetches music from the Baidu streaming music player.
 
 == Usage
 
-The code currently requires the string encoding support in Ruby 1.9. Use MRI 1.9.2 or Rubinius / Jruby in 1.9 mode.
+The code currently requires the string encoding support in Ruby 1.9. Use MRI 1.9.3 or Rubinius / Jruby in 1.9 mode.
 
     rvm use 1.9.2
 
@@ -26,15 +26,16 @@ If you're not in Mainland China, you can use a proxy to get your music fix.
 
     http_proxy=google.for.a.proxy:1234 zhangmen fetch 602
 
+Or, if you're feeling lazy, let the code try to pick a proxy for you.
+
+    http_proxy=auto zhangmen fetch 602
+
+
 == Testing
 
 The tests are written in RSpec. Run them like this.
 
    rake spec
-
-If you're not in Mainland China, set http_proxy so the downloading tests pass.
-
-    http_proxy=google.for.a.proxy:1234 rake spec
 
 == Known Issues
 
